@@ -1,5 +1,6 @@
 from urllib.request import urlopen
 from urllib.parse import urlencode
+from urllib.error import HTTPError
 from datetime import timedelta, datetime
 import pdb
 from xlwt import Workbook, easyxf
@@ -23,7 +24,11 @@ def makeexcel(ticker, deal_date, future_lag, past_lag):
     )
     queryString = yUrl + queryString
     print(queryString)
-    resp = urlopen(queryString)
+    try:
+        resp = urlopen(queryString)
+    except HTTPError:
+        return '404'
+
 
     w = Workbook()
     sheet = w.add_sheet(ticker)
@@ -33,13 +38,13 @@ def makeexcel(ticker, deal_date, future_lag, past_lag):
 
     sheet.write(0, 0, 'Date')
     sheet.write(0, 1, 'Open')
-    sheet.write(0, 2, 'Adj Close')
+    sheet.write(0, 2, 'Close')
 
     for line in resp.readlines()[1:]:
         elements = line.decode('utf8').split(',')
         date_string = elements[0]
         open_value = elements[1]
-        close_value = elements[6]
+        close_value = elements[4]
         if datetime.strptime(date_string, '%Y-%m-%d') == deal_date:
             style = boldfont
         else:
@@ -51,9 +56,8 @@ def makeexcel(ticker, deal_date, future_lag, past_lag):
 
         print(date_string, open_value, close_value)
 
-    filename = ticker+'.xls'
-    w.save(filename)
-    return filename
+    w.save(ticker)
+    return ticker
 
 
 
