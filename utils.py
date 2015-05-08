@@ -9,6 +9,9 @@ import pdb
 from xlwt import Workbook, easyxf
 
 def get_historical_data(ticker, deal_date, future_lag, past_lag):
+    '''
+    given a ticker and date and lags, return list of historical data
+    '''
     yUrl = 'http://real-chart.finance.yahoo.com/table.csv?'
     endDate = add_workdays(deal_date, future_lag)
     startDate = deal_date - timedelta(days=past_lag)
@@ -36,7 +39,11 @@ def get_historical_data(ticker, deal_date, future_lag, past_lag):
     return result_list
 
 def write_file(result_list, deal_date, company_name, filename):
-
+    '''
+    given a list, put it into excel file.
+    deal_date specifies a string which will be rendered as bold
+    company_name and filename are self-explanatory
+    '''
     w = Workbook()
     sheet = w.add_sheet(company_name)
     row = 2
@@ -69,7 +76,7 @@ def write_file(result_list, deal_date, company_name, filename):
 
 def add_workdays(date, days_amt):
     '''
-    increment days while skipping weekends
+    increment days in a given date while skipping weekends
     '''
     while days_amt > 0:
         date += timedelta(days=1)
@@ -84,18 +91,21 @@ def add_workdays(date, days_amt):
 def find_single_ticker(name):
     '''
     finds ticker by name
-    returns None if found 0 or >=2 tickers
+    returns ticker, msg
+    ticker = None if several options are found and cannot be narrowed down
+    mgs is a comment for flashing
     '''
 
     tickers = get_list_from_yahoo(name)
+    # if nothing found try some other name options
     if len(tickers) == 0:
-        #print('result length 0. generating options...')
         options = gen_name_options(name)
 
         for option in options:
-            #print('option: ', option)
             ticker_options = get_list_from_yahoo(option)
 
+            # if there are several options, try to narrow down
+            # by removing tickers with dots
             if len(ticker_options) > 1:
                 # get just symbols
                 names = [t['symbol'] for t in ticker_options]
@@ -107,7 +117,7 @@ def find_single_ticker(name):
                     msg = 'Нашелся тикер: {}'.format(t)
                     return t, msg
 
-                #print('found more than 1 result')
+                # if there are still several tickers left, return None
                 msg = 'По названию "{}" найдено несколько компаний: <br/>'
                 msg = msg.format(name)
                 for el in ticker_options:
@@ -116,20 +126,22 @@ def find_single_ticker(name):
                 return None, msg
 
             elif len(ticker_options) == 1:
+                # yay, we got what we needed!
                 t = ticker_options[0]['symbol']
-                #print('found exactly 1 result')
                 msg = 'Нашелся тикер: {}'.format(t)
                 return t, msg
 
             else:
-                #print('result length 0')
                 pass
 
+        # nothing helped. Returning with empty hands
         options = '; '.join(options)
         msg = 'По названию "{}" найдено 0 компаний. Испробованы варианты: {}'
         msg = msg.format(name, options)
         return None, msg
 
+    # if we got several tickers at the first try
+    # first we narrow it down by removing tickers with dots
     elif len(tickers) > 1:
         # get just symbols
         names = [t['symbol'] for t in tickers]
@@ -141,6 +153,7 @@ def find_single_ticker(name):
             msg = 'Нашелся тикер: {}'.format(t)
             return t, msg
 
+        # if above didnt help narrow our list down
         msg = 'По названию "{}" найдено несколько компаний:<br/>'
         msg = msg.format(name)
         for el in tickers:
@@ -148,6 +161,7 @@ def find_single_ticker(name):
             msg += pair
         return None, msg
 
+    # if we found jus what we needed from the first try
     else:
         t = tickers[0]['symbol']
         msg = 'Нашелся тикер: {}'.format(t)
@@ -156,6 +170,10 @@ def find_single_ticker(name):
 
 
 def get_list_from_yahoo(name):
+    '''
+    given a company name, perform a query on a yahoo API
+    to retrieve possible tickers
+    '''
     searchUrl = 'http://d.yimg.com/autoc.finance.yahoo.com/autoc?' \
                     'query={0}&callback=YAHOO.Finance.SymbolSuggest.ssCallback'
     escapedName = quote(name)
@@ -169,6 +187,10 @@ def get_list_from_yahoo(name):
 
 
 def gen_name_options(name):
+    '''
+    add some name options
+    i.e. Company Inc -> Company, Inc   Company Inc.    Company, Inc.
+    '''
     if 'inc' in name.lower():
         beforeInc = name.lower().split(' inc')[0]
         options = [
@@ -196,7 +218,11 @@ def append_excel_sheet(aquiror_name, aquiror_ticker, aquiror_data,
                      target_name, target_ticker, target_data,
                      sheet, row, deal_date):
 
-
+    '''
+    given info about aquiror and target,
+    write it into excel file
+    and return file object and new row number
+    '''
     sheet.write(row, 3, aquiror_ticker)
     sheet.write(row, 4, aquiror_name)
     sheet.write(row, 9, target_ticker)
@@ -207,11 +233,14 @@ def append_excel_sheet(aquiror_name, aquiror_ticker, aquiror_data,
 
     # if yahoo didnt respond to the data request with 404
     if aquiror_data != '404':
+
+
         for d in aquiror_data:
             d = d.decode('utf8').split(',')
             date_string = d[0]
             open_value = d[1]
             close_value = d[4]
+            # put a DEAL string at the point where the deal happened
             if datetime.strptime(date_string, '%Y-%m-%d') == deal_date:
                 sheet.write(aq_row, 2, 'DEAL')
             sheet.write(aq_row, 3, date_string)
@@ -228,6 +257,7 @@ def append_excel_sheet(aquiror_name, aquiror_ticker, aquiror_data,
             date_string = d[0]
             open_value = d[1]
             close_value = d[4]
+            # put a DEAL string at the point where the deal happened
             if datetime.strptime(date_string, '%Y-%m-%d') == deal_date:
                 sheet.write(tar_row, 8, 'DEAL')
             sheet.write(tar_row, 9, date_string)
