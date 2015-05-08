@@ -5,7 +5,7 @@ import csv
 import requests
 import json
 from datetime import datetime
-from makeexcel import makeexcel
+from makeexcel import get_historical_data, write_file
 import os
 
 app = Flask(__name__)
@@ -27,21 +27,21 @@ def onecompany():
         return render_template('enter_name_or_code.html')
 
     # get args
-    c_name = request.form.get('c_name')
-    c_ticker = request.form.get('c_ticker')
+    company_name = request.form.get('c_name')
+    ticker = request.form.get('c_ticker')
 
-    if not c_name and not c_ticker:
+    if not company_name and not ticker:
         flash('Введите название или тикер')
         return redirect(url_for('onecompany'))
 
     # if ticker is not provided, find it by name.
     # If not successful, flash error and redirect
-    if not c_ticker:
-        t, msg = find_single_ticker(c_name)
+    if not ticker:
+        t, msg = find_single_ticker(company_name)
         if not t:
             flash(msg)
             return redirect(url_for('onecompany'))
-        c_ticker = t
+        ticker = t
 
     # get date and lag agrs
     deal_date = request.form.get('deal_date')
@@ -67,24 +67,21 @@ def onecompany():
         return redirect(url_for('onecompany'))
 
 
-    filename = makeexcel(c_ticker, deal_date, future_lag, past_lag)
-
-    # makeexcel() will return '404' if the request is unsuccessful
+    hist_data = get_historical_data(ticker, deal_date, future_lag, past_lag)
+    # get_historical_data() will return '404' if the request is unsuccessful
     # i.e. wrong ticker specified
-    if filename == '404':
+    if hist_data == '404':
         flash('Такого тикера не существует.')
         return redirect(url_for('onecompany'))
 
-    # if a company name was given, give the attachment the company name
-    # otherwise name it as ticker
-    if c_name:
-        attachment_filename = c_name + '.xls'
-    else:
-        attachment_filename = filename + '.xls'
+    if not company_name:
+        company_name = ticker
+    filename = ticker + '.xls'
+    write_file(hist_data, deal_date, company_name, filename)
 
     return send_file(filename,
                      as_attachment=True,
-                     attachment_filename=attachment_filename)
+                     attachment_filename=filename)
 
 
 

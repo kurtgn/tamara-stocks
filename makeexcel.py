@@ -5,7 +5,7 @@ from datetime import timedelta, datetime
 import pdb
 from xlwt import Workbook, easyxf
 
-def makeexcel(ticker, deal_date, future_lag, past_lag):
+def get_historical_data(ticker, deal_date, future_lag, past_lag):
     yUrl = 'http://real-chart.finance.yahoo.com/table.csv?'
     endDate = add_workdays(deal_date, future_lag)
     startDate = deal_date - timedelta(days=past_lag)
@@ -29,18 +29,22 @@ def makeexcel(ticker, deal_date, future_lag, past_lag):
     except HTTPError:
         return '404'
 
+    result_list = resp.readlines()[1:]
+    return result_list
+
+def write_file(result_list, deal_date, company_name, filename):
 
     w = Workbook()
-    sheet = w.add_sheet(ticker)
-    row = 1
+    sheet = w.add_sheet(company_name)
+    row = 2
     boldfont = easyxf(strg_to_parse='font: bold on')
     normalfont = easyxf(strg_to_parse='')
+    sheet.write(0, 0, company_name)
+    sheet.write(1, 0, 'Date')
+    sheet.write(1, 1, 'Open')
+    sheet.write(1, 2, 'Close')
 
-    sheet.write(0, 0, 'Date')
-    sheet.write(0, 1, 'Open')
-    sheet.write(0, 2, 'Close')
-
-    for line in resp.readlines()[1:]:
+    for line in result_list:
         elements = line.decode('utf8').split(',')
         date_string = elements[0]
         open_value = elements[1]
@@ -55,9 +59,8 @@ def makeexcel(ticker, deal_date, future_lag, past_lag):
         row += 1
 
         print(date_string, open_value, close_value)
+    w.save(filename)
 
-    w.save(ticker)
-    return ticker
 
 
 
