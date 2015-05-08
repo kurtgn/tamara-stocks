@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+  <meta charset="UTF-8">
+  <title></title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='jquery-ui.css') }}">
+  <script src="{{ url_for('static', filename='jquery.js') }}"></script>
+  <script src="{{ url_for('static', filename='jquery-ui.js') }}"></script>
+
+
+  <style>
+    body {
+      padding-top:30px
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="row">
+    {% for msg in get_flashed_messages() %}
+      <div class="alert alert-success" role="alert">
+        {{ msg | safe }}
+      </div>
+
+    {% endfor %}
+  </div>
+  <div class="row">
+    <div class="col-sm-6 col-sm-offset-3">
+      <h3>Скачать данные по 1 компании</h3>
+      <form method="post">
+        <div class="row">
+          <div class="col-sm-8">
+            <div class="form-group">
+              <label>Введите название</label>
+              <input class="form-control" type="text" name="c_name">
+            </div>
+          </div>
+          <div class="col-sm-4">
+            <div class="form-group">
+              <label>Или тикер</label>
+              <input class="form-control" type="text" name="c_ticker">
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-sm-4">
+
+            <div class="form-group">
+              <label>Дату сделки</label>
+              <input class="form-control datepicker" type="text" name="deal_date">
+            </div>
+          </div>
+          <div class="col-sm-4">
+            <div class="form-group">
+              <label>Лаг вперед (дней)</label>
+              <input class="form-control" type="text" name="future_lag" value="4">
+            </div>
+          </div>
+          <div class="col-sm-4">
+            <div class="form-group">
+              <label>Лаг назад (дней)</label>
+              <input class="form-control" type="text" name="past_lag" value="10">
+            </div>
+          </div>
+        </div>
+
+
+
+      <button type="submit" class="btn btn-default">Ок</button>
+
+      </form>
+    </div>
+  </div>
+
+</div>
+<script>
+  $(".datepicker").datepicker();
+
+</script>
+
+
+</body>
+
+
+
+</html>
