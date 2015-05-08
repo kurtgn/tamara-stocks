@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 from urllib.parse import urlencode
 from urllib.request import urlopen, quote
 import csv
@@ -6,6 +6,7 @@ import requests
 import json
 from datetime import datetime
 from makeexcel import makeexcel
+import os
 
 app = Flask(__name__)
 app.config['DEBUG'] = True
@@ -13,14 +14,14 @@ app.secret_key='sjkhdkjashdiashpd98ahsduh'
 import pdb
 
 
-
+'''
 @app.route("/", methods=['GET','POST'])
 def hello():
     print(request.files)
     return render_template('uploader.html')
 
-
-@app.route("/onecompany/", methods=['GET','POST'])
+'''
+@app.route("/", methods=['GET','POST'])
 def onecompany():
     if request.method == 'GET':
         return render_template('enter_name_or_code.html')
@@ -53,8 +54,14 @@ def onecompany():
         flash('Некорректный формат даты.')
         return redirect(url_for('onecompany'))
 
-    makeexcel(c_ticker, deal_date, future_lag, past_lag)
-    return 'ok'
+    if deal_date.weekday() in [5, 6]:
+        msg = '{} - выходной день. В этот день не было торгов. Выберите рабочий день.'
+        flash(msg.format(deal_date.strftime('%d.%m.%Y')))
+        return redirect(url_for('onecompany'))
+
+    filename = makeexcel(c_ticker, deal_date, future_lag, past_lag)
+    return send_file(filename, as_attachment=True, attachment_filename=filename)
+
 
 
 
