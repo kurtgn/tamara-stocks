@@ -215,21 +215,18 @@ def gen_name_options(name):
 
 
 def append_excel_sheet(aquiror_name, aquiror_ticker, aquiror_data,
-                     target_name, target_ticker, target_data,
-                     sheet, row, deal_date):
+                       sheet, row, col, deal_date):
 
     '''
-    given info about aquiror and target,
+    given info about a company,
     write it into excel file
-    and return file object and new row number
+    and return file object and new row+col number
     '''
     sheet.write(row, 3, aquiror_ticker)
     sheet.write(row, 4, aquiror_name)
-    sheet.write(row, 9, target_ticker)
-    sheet.write(row, 10, target_name)
 
     row += 2
-    aq_row = row
+
 
     # if yahoo didnt respond to the data request with 404
     if aquiror_data != '404':
@@ -242,29 +239,79 @@ def append_excel_sheet(aquiror_name, aquiror_ticker, aquiror_data,
             close_value = d[4]
             # put a DEAL string at the point where the deal happened
             if datetime.strptime(date_string, '%Y-%m-%d') == deal_date:
-                sheet.write(aq_row, 2, 'DEAL')
-            sheet.write(aq_row, 3, date_string)
-            sheet.write(aq_row, 4, open_value)
-            sheet.write(aq_row, 5, close_value)
-            aq_row += 1
+                sheet.write(row, col, 'DEAL')
+            sheet.write(row, col+1, date_string)
+            sheet.write(row, col+2, open_value)
+            sheet.write(row, col+3, close_value)
+            row += 1
 
-    tar_row = row
+    col += 5
 
-    # if yahoo didnt respond to the data request with 404
-    if target_data != '404':
-        for d in target_data:
-            d = d.decode('utf8').split(',')
-            date_string = d[0]
-            open_value = d[1]
-            close_value = d[4]
-            # put a DEAL string at the point where the deal happened
-            if datetime.strptime(date_string, '%Y-%m-%d') == deal_date:
-                sheet.write(tar_row, 8, 'DEAL')
-            sheet.write(tar_row, 9, date_string)
-            sheet.write(tar_row, 10, open_value)
-            sheet.write(tar_row, 11, close_value)
-            tar_row += 1
+    return sheet, row, col
 
-    row = max(tar_row, aq_row) + 3
 
-    return sheet, row
+class Report(object):
+    def __init__(self):
+        self.w = Workbook()
+        self.sheet = self.w.add_sheet('results')
+        self.row = 0
+        self.col = 2
+        self.baseline_row = 0
+        self.boldfont = easyxf(strg_to_parse='font: bold on')
+        self.normalfont = easyxf(strg_to_parse='')
+
+    def write_company(self, name, ticker, data, deal_date, deal_num=None):
+        '''
+        given info about a company,
+        write a nice column of data
+        and anvance 5 columns right
+        '''
+        self.row = self.baseline_row
+
+        self.sheet.write(self.row, self.col, ticker)
+        self.sheet.write(self.row, self.col+1, name)
+
+        self.row += 2
+
+        # if yahoo didnt respond to the data request with 404
+        if data != '404':
+            for d in data:
+                d = d.decode('utf8').split(',')
+                date_string = d[0]
+                open_value = d[1]
+                close_value = d[4]
+                # put a DEAL string at the point where the deal happened
+                if datetime.strptime(date_string, '%Y-%m-%d') == deal_date:
+                    style = self.boldfont
+                else:
+                    style = self.normalfont
+                self.sheet.write(self.row, self.col, date_string, style)
+                self.sheet.write(self.row, self.col+1, open_value, style)
+                self.sheet.write(self.row, self.col+2, close_value, style)
+
+                # a quick and dirty workaround
+                # to write deal number to the first column
+                # we catch exceptions here because
+                # we want to enable overwriting
+
+                if deal_num:
+                    try:
+                        self.sheet.write(self.row, 0, deal_num)
+                    except Exception:
+                        pass
+
+                self.row += 1
+
+        self.col+=4
+        return self.row
+
+    def set_baseline_row(self, val):
+        '''
+        something like carriage return.
+        Set new baseline row and reset column number to starting value.
+        '''
+        self.baseline_row = val
+        self.col = 2
+
+    def save_file(self, filename):
+        self.w.save(filename)
