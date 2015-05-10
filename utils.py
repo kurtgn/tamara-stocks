@@ -326,14 +326,9 @@ class Report(object):
         self.sheet.write(self.row+1, self.col+2, 'com return')
         self.sheet.write(self.row+1, self.col+3, 'mrkt return')
 
-
         self.row += 2
 
-
         # print regression values
-
-
-        
         self.sheet.write(self.row, self.col+4, 'beta', self.boldfont)
         self.sheet.write(self.row+1, self.col+4, data_for_print['beta'])
         self.sheet.write(self.row+2, self.col+4, 'alpha', self.boldfont)
@@ -345,12 +340,11 @@ class Report(object):
         self.sheet.write(self.row+8, self.col+4, 'std_err', self.boldfont)
         self.sheet.write(self.row+9, self.col+4, data_for_print['std_err'])
 
-
-
         for idx, d in enumerate(data_for_print['company_data']):
             date = d[0].strftime('%d.%m.%Y')
             adj_close = d[1]
             ret_value = d[2]
+
             # put bold font at the point where the deal happened
             if d[0] == deal_date:
                 style = self.boldfont
@@ -366,7 +360,7 @@ class Report(object):
             # a quick and dirty workaround
             # to write deal number to the first column
             # we catch exceptions here because
-            # we want to enable overwriting
+            # we want to enable overwriting cells
 
             if deal_num:
                 try:
@@ -401,12 +395,12 @@ class Report(object):
         self.col += 1
         self.sheet.write(self.row, self.col, 'std deviation', self.boldfont)
         self.sheet.write(self.row+1, self.col, data_for_print['standard_deviation'])
-        self.sheet.write(self.row+2, self.col, 'CAR', self.boldfont)
-        self.sheet.write(self.row+3, self.col, data_for_print['CAR'])
-        self.sheet.write(self.row+4, self.col, 't stat', self.boldfont)
-        self.sheet.write(self.row+5, self.col, data_for_print['t_stat'])
+        self.sheet.write(self.row, self.col+1, 'CAR', self.boldfont)
+        self.sheet.write(self.row+1, self.col+1, data_for_print['CAR'])
+        self.sheet.write(self.row, self.col+2, 't stat', self.boldfont)
+        self.sheet.write(self.row+1, self.col+2, data_for_print['t_stat'])
 
-        self.col += 2
+        self.col += 4
 
         self.row_history.append(15)
 
