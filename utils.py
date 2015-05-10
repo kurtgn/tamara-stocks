@@ -80,7 +80,7 @@ def add_workdays(date, days_amt):
     '''
     while days_amt > 0:
         date += timedelta(days=1)
-        if date.weekday() not in [5, 6]:
+        if date.weekday() not in [5, 6] and not (date.month == 12 and date.day == 25):
             days_amt -= 1
     return date
 
@@ -259,6 +259,7 @@ class Report(object):
         self.baseline_row = 0
         self.boldfont = easyxf(strg_to_parse='font: bold on')
         self.normalfont = easyxf(strg_to_parse='')
+        self.row_history = []
 
     def write_company(self, name, ticker, data, deal_date, deal_num=None):
         '''
@@ -305,6 +306,110 @@ class Report(object):
         self.col+=4
         return self.row
 
+
+    def write_data(self, name, ticker, data_for_print, deal_date, deal_num=None):
+        '''
+        given info about a company,
+        write a nice column of data
+        and anvance 5 columns right
+        '''
+        self.row = self.baseline_row
+
+        self.sheet.write(self.row, self.col, ticker)
+        self.sheet.write(self.row, self.col+1, name)
+
+        # start commenting here if needed short version
+        # '''
+
+        self.sheet.write(self.row+1, self.col, 'date')
+        self.sheet.write(self.row+1, self.col+1, 'adj close')
+        self.sheet.write(self.row+1, self.col+2, 'com return')
+        self.sheet.write(self.row+1, self.col+3, 'mrkt return')
+
+
+        self.row += 2
+
+
+        # print regression values
+
+
+        
+        self.sheet.write(self.row, self.col+4, 'beta', self.boldfont)
+        self.sheet.write(self.row+1, self.col+4, data_for_print['beta'])
+        self.sheet.write(self.row+2, self.col+4, 'alpha', self.boldfont)
+        self.sheet.write(self.row+3, self.col+4, data_for_print['alpha'])
+        self.sheet.write(self.row+4, self.col+4, 'r_value', self.boldfont)
+        self.sheet.write(self.row+5, self.col+4, data_for_print['r_value'])
+        self.sheet.write(self.row+6, self.col+4, 'p_value', self.boldfont)
+        self.sheet.write(self.row+7, self.col+4, data_for_print['p_value'])
+        self.sheet.write(self.row+8, self.col+4, 'std_err', self.boldfont)
+        self.sheet.write(self.row+9, self.col+4, data_for_print['std_err'])
+
+
+
+        for idx, d in enumerate(data_for_print['company_data']):
+            date = d[0].strftime('%d.%m.%Y')
+            adj_close = d[1]
+            ret_value = d[2]
+            # put bold font at the point where the deal happened
+            if d[0] == deal_date:
+                style = self.boldfont
+            else:
+                style = self.normalfont
+            self.sheet.write(self.row, self.col, date, style)
+            self.sheet.write(self.row, self.col+1, adj_close, style)
+            self.sheet.write(self.row, self.col+2, ret_value, style)
+
+            market_ret_value = data_for_print['market_data'][idx][2]
+            self.sheet.write(self.row, self.col+3, market_ret_value, style)
+
+            # a quick and dirty workaround
+            # to write deal number to the first column
+            # we catch exceptions here because
+            # we want to enable overwriting
+
+            if deal_num:
+                try:
+                    self.sheet.write(self.row, 0, deal_num)
+                except Exception:
+                    pass
+
+            self.row += 1
+
+
+        self.row_history.append(self.row)
+
+        self.col += 5
+
+
+        self.row = self.baseline_row + 2
+
+        self.sheet.write(self.row-1, self.col, 'comp exp ret')
+        for idx, val in enumerate(data_for_print['company_expected_return']):
+            self.sheet.write(self.row+idx, self.col, val)
+
+        self.col += 1
+        self.sheet.write(self.row-1, self.col, 'abnormal return')
+        for idx, val in enumerate(data_for_print['abnormal_return']):
+            self.sheet.write(self.row+idx, self.col, val)
+
+
+        # end commenting here if needed short version
+        # '''
+        # self.row += 2
+
+        self.col += 1
+        self.sheet.write(self.row, self.col, 'std deviation', self.boldfont)
+        self.sheet.write(self.row+1, self.col, data_for_print['standard_deviation'])
+        self.sheet.write(self.row+2, self.col, 'CAR', self.boldfont)
+        self.sheet.write(self.row+3, self.col, data_for_print['CAR'])
+        self.sheet.write(self.row+4, self.col, 't stat', self.boldfont)
+        self.sheet.write(self.row+5, self.col, data_for_print['t_stat'])
+
+        self.col += 2
+
+        self.row_history.append(15)
+
     def set_baseline_row(self, val):
         '''
         something like carriage return.
@@ -313,5 +418,34 @@ class Report(object):
         self.baseline_row = val
         self.col = 2
 
+    def start_new_row(self):
+        '''
+        take maximum row from row history
+        set it as new baseline row
+        reset self.col to starting value
+        '''
+        self.baseline_row = max(self.row_history) + 3
+        self.col = 2
+
     def save_file(self, filename):
         self.w.save(filename)
+
+
+def extract_columns_add_close_return(data):
+    new_data = []
+    # if yahoo didnt respond to the data request with 404
+    if data != '404':
+        for idx, row in enumerate(data):
+            row = row.decode('utf8').split(',')
+            date_string = row[0]
+            date_string = datetime.strptime(date_string, '%Y-%m-%d')
+            adj_close_value = float(row[6])
+            try:
+                next_row = data[idx+1]
+                next_row = next_row.decode('utf8').split(',')
+                older_adj_close_value = float(next_row[6])
+                ret_value = adj_close_value / older_adj_close_value - 1
+            except:
+                ret_value = 0
+            new_data.append([date_string, adj_close_value, ret_value])
+    return new_data
