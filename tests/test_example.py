@@ -25,8 +25,10 @@ class SomeTest(unittest.TestCase):
     def test_main_returns_200(self):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        assert False
 
+    def test_main_contents(self):
+        response = self.client.get('/')
+        self.assertIn('компании'.encode('utf8'), response.data)
 
 
 if __name__ == "__main__":
